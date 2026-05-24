@@ -47,9 +47,12 @@ class GradientSudokuSolver:
         return exp_x / (exp_x.sum(axis=2, keepdims=True) + 1e-15)
 
     def _energy_fn(self, X: np.ndarray) -> Tuple[float, np.ndarray]:
-        """Energy function + gradient
+        """Energy function + gradient (correct softmax Jacobian, vectorized)
 
-        E(X) = E_cell + E_row + E_col + E_box + lambda * L2
+        E(X) = E_row + E_col + E_box + lambda * L2
+
+        Uses the full softmax Jacobian:
+            dP_k / dX_l = P_k * (delta_{k,l} - P_l)
 
         Returns:
             (energy, gradient wrt X)
@@ -57,54 +60,42 @@ class GradientSudokuSolver:
         P = self._softmax_x(X)
         grad = np.zeros_like(X)
 
-        # Cell constraint: sum_v P[i,j,v] = 1
-        cell_sums = P.sum(axis=2)
-        E_cell = np.sum((cell_sums - 1.0) ** 2)
-        for i in range(9):
-            for j in range(9):
-                p = P[i, j, :]
-                ds = 2 * (p.sum() - 1.0)
-                grad[i, j, :] += ds * p * (1 - p)
+        # Row-digit constraint: sum_j P[i,j,v] = 1  (vectorized)
+        # P: (9,9,9) -> col_sums: (9,9) sum over col dim 1
+        col_sums = P.sum(axis=1)       # (9,9): row i, digit v
+        row_residual = col_sums - 1.0  # (9,9)
+        E_row = np.sum(row_residual ** 2)
+        # dEdP: (9,9,9) broadcast over col dim
+        dEdP_row = 2.0 * row_residual[:, np.newaxis, :]  # (9,1,9)
+        dot_row = np.sum(P * dEdP_row, axis=2, keepdims=True)  # (9,9,1)
+        grad += P * (dEdP_row - dot_row)
 
-        # Row-digit constraint: sum_j P[i,j,v] = 1
-        E_row = 0.0
-        for i in range(9):
-            for v in range(9):
-                s = P[i, :, v].sum()
-                E_row += (s - 1.0) ** 2
-                d = 2 * (s - 1.0)
-                for j in range(9):
-                    p = P[i, j, v]
-                    grad[i, j, v] += d * p * (1 - p)
+        # Col-digit constraint: sum_i P[i,j,v] = 1  (vectorized)
+        row_sums = P.sum(axis=0)       # (9,9): col j, digit v
+        col_residual = row_sums - 1.0  # (9,9)
+        E_col = np.sum(col_residual ** 2)
+        dEdP_col = 2.0 * col_residual[np.newaxis, :, :]  # (1,9,9)
+        dot_col = np.sum(P * dEdP_col, axis=2, keepdims=True)  # (9,9,1)
+        grad += P * (dEdP_col - dot_col)
 
-        # Col-digit constraint: sum_i P[i,j,v] = 1
-        E_col = 0.0
-        for j in range(9):
-            for v in range(9):
-                s = P[:, j, v].sum()
-                E_col += (s - 1.0) ** 2
-                d = 2 * (s - 1.0)
-                for i in range(9):
-                    p = P[i, j, v]
-                    grad[i, j, v] += d * p * (1 - p)
-
-        # Box-digit constraint: sum_{(i,j) in box} P[i,j,v] = 1
-        E_box = 0.0
-        for b in range(9):
-            br, bc = b // 3 * 3, b % 3 * 3
-            for v in range(9):
-                s = sum(P[br + dr, bc + dc, v] for dr in range(3) for dc in range(3))
-                E_box += (s - 1.0) ** 2
-                d = 2 * (s - 1.0)
-                for dr in range(3):
-                    for dc in range(3):
-                        grad[br + dr, bc + dc, v] += d * P[br + dr, bc + dc, v] * (1 - P[br + dr, bc + dc, v])
+        # Box-digit constraint: sum_{(i,j) in box} P[i,j,v] = 1  (vectorized)
+        # Build box selector: for each box (9), 9 cells -> (9,9) mask per cell? No.
+        # Reshape: (9,9,9) -> (3,3,3,3,9) for box grouping
+        P_boxes = P.reshape(3, 3, 3, 3, 9)  # (row_block, col_block, row_in_box, col_in_box, digit)
+        box_sums = P_boxes.sum(axis=(2, 3))  # (3,3,9): box_block_row, box_block_col, digit
+        box_residual = box_sums - 1.0        # (3,3,9)
+        E_box = np.sum(box_residual ** 2)
+        # dEdP broadcast to each cell in box: (1,1,3,3,9)
+        dEdP_box = 2.0 * box_residual[:, :, np.newaxis, np.newaxis, :]  # (3,3,1,1,9)
+        dot_box = np.sum(P_boxes * dEdP_box, axis=4, keepdims=True)     # (3,3,3,3,1)
+        grad_box = P_boxes * (dEdP_box - dot_box)                       # (3,3,3,3,9)
+        grad += grad_box.reshape(9, 9, 9)
 
         # L2 regularization
         E_l2 = 0.5 * np.sum(X ** 2)
         grad += self.config.entropy_weight * X
 
-        E_total = E_cell + E_row + E_col + E_box + self.config.entropy_weight * E_l2
+        E_total = E_row + E_col + E_box + self.config.entropy_weight * E_l2
         return E_total, grad
 
     def solve(self, board: SudokuBoard) -> Tuple[SudokuBoard, dict]:

@@ -18,7 +18,7 @@ The Phistomefel Ring (also called Phistomefel's Theorem or the "pencil-mark ring
 
 The theorem is a consequence of the **set equivalence principle**: any two regions of the Sudoku grid formed by the union, intersection, and difference of complete rows, columns, and 3x3 boxes must have identical digit multisets. This is because each row, column, and box contains each digit exactly once.
 
-While the theorem itself is well-established, the **specific cellular composition** of the ring has not, to our knowledge, been systematically enumerated. This paper fills that gap.
+While the theorem itself is well-established, the **specific cellular composition** of the ring has not, to our knowledge, been systematically enumerated. This paper presents a first computational enumeration on a single solved grid.
 
 ---
 
@@ -47,7 +47,7 @@ Total: 16 cells.
 
 For each of the four edge 3x3 boxes (boxes 1, 3, 5, 7), we generate all C(9,4) = 126 possible 4-cell subsets. Each subset is binned by its digit multiset. We then search across all 126^4 = 252 million possible 16-cell combinations for those matching the green multiset, using multiset binning to reduce the search space to approximately 126^4 / (9!)^4 ~ manageable levels.
 
-Fifteen matching patterns were found and analyzed for rotational symmetry.
+Twenty-five matching patterns were found and analyzed for rotational symmetry.
 
 ---
 
@@ -124,7 +124,7 @@ This rule generalizes: **any two complementary groups of 4 boxes, each selecting
 
 #### 4.1 Universal Ring Family
 
-The "away-from-center" rule extends beyond the classic Phistomefel partition. We tested all complementary 4-box partitions with at most 1 box overlap. Each pair produces a valid 16-cell ring equivalence. The classic case (corner boxes {0,2,6,8} vs edge boxes {1,3,5,7}) is the most symmetric but not unique.
+The "away-from-center" rule extends beyond the classic Phistomefel partition. Our search demonstrated 25 valid ring configurations from the classic corner-box partition (boxes {0,2,6,8} vs edge boxes {1,3,5,7}). We conjecture that other complementary 4-box partitions produce similar equivalences, but this has only been verified for the classic case on a single solved grid. Comprehensive verification across multiple solutions and partitions is left for future work.
 
 #### 4.2 Relation to Sinkhorn Tensor
 
@@ -138,7 +138,7 @@ We have computationally verified the Phistomefel Ring theorem and extended it in
 
 1. **Enumerated all valid ring configurations** — 25 patterns exist, not one
 2. **Formalized the away-from-center rule** — a general principle for constructing 16-cell equivalence pairs
-3. **Shown the universality** — any complementary 4-box partition works, not just the classic corner-vs-edge partition
+3. **Conjectured universality** — based on the away-from-center rule, complementary 4-box partitions may produce similar equivalences, but this remains to be verified across multiple solutions
 
 These findings deepen our understanding of set equivalence in Sudoku and demonstrate the power of computational search for discovering structure in constraint satisfaction problems.
 
@@ -149,5 +149,3 @@ These findings deepen our understanding of set equivalence in Sudoku and demonst
 [1] Sinkhorn, R. & Knopp, P. (1967). "Concerning nonnegative matrices and doubly stochastic matrices." *Pacific Journal of Mathematics*, 21(2), 343-348.
 
 [2] Phistomefel. (2019). "Phistomefel's Ring." *Cracking the Cryptic*, YouTube.
-
-[3] Cutler, M. et al. (2020). "Set equivalence in Sudoku: a systematic approach." *Recreational Mathematics Magazine*.

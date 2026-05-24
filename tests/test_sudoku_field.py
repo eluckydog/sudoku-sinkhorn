@@ -128,7 +128,16 @@ def test_field_compare():
 
 
 if __name__ == "__main__":
+    import traceback
     funcs = [v for k, v in globals().items() if k.startswith("test_")]
-    passed = sum(1 for fn in funcs if _test(fn))
-    failed = len(funcs) - passed
+    passed = 0
+    failed = 0
+    for fn in funcs:
+        try:
+            fn()
+            passed += 1
+        except Exception as e:
+            failed += 1
+            print(f"  FAIL: {fn.__name__}: {e}")
+            traceback.print_exc()
     print(f"\n  {passed}/{passed + failed} passed")

@@ -5,6 +5,7 @@ Core data structure: SudokuBoard (9x9)
 Tensor view: 9x9x9 triples (row, col, value)
 """
 
+import warnings
 import numpy as np
 from typing import List, Optional, Set
 
@@ -35,8 +36,24 @@ class SudokuBoard:
         if grid is None:
             self.grid = [[0] * 9 for _ in range(9)]
         else:
-            assert len(grid) == 9 and all(len(row) == 9 for row in grid)
+            assert len(grid) == 9 and all(len(row) == 9 for row in grid), \
+                f"Expected 9x9 grid, got {len(grid)}x{len(grid[0]) if grid else 0}"
+            for r in range(9):
+                for c in range(9):
+                    v = grid[r][c]
+                    assert isinstance(v, int) and 0 <= v <= 9, \
+                        f"Cell ({r},{c}) has invalid value {v}; must be 0-9"
             self.grid = [row[:] for row in grid]
+        if not self._is_valid_internally():
+            warnings.warn("Board contains conflicting clues (duplicate digits in row/col/box)")
+
+    @classmethod
+    def from_trusted(cls, grid: List[List[int]]) -> "SudokuBoard":
+        """Create board with strict validation (raises ValueError on conflicts)"""
+        board = cls(grid)
+        if not board._is_valid_internally():
+            raise ValueError("Board contains conflicting clues (duplicate digits in row/col/box)")
+        return board
 
     @classmethod
     def from_string(cls, s: str) -> "SudokuBoard":
@@ -64,6 +81,30 @@ class SudokuBoard:
 
     def count_empty(self) -> int:
         return sum(row.count(0) for row in self.grid)
+
+    def _is_valid_internally(self) -> bool:
+        """Fast validity check for constructor (internal, no recursion)"""
+        for r in range(9):
+            seen = set()
+            for v in self.grid[r]:
+                if v != 0 and v in seen:
+                    return False
+                seen.add(v)
+        for c in range(9):
+            seen = set()
+            for r in range(9):
+                v = self.grid[r][c]
+                if v != 0 and v in seen:
+                    return False
+                seen.add(v)
+        for b in range(9):
+            seen = set()
+            for (r, c) in BOX_MAP[b]:
+                v = self.grid[r][c]
+                if v != 0 and v in seen:
+                    return False
+                seen.add(v)
+        return True
 
     def is_valid(self) -> bool:
         """Check if board violates any constraint"""

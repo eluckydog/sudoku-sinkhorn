@@ -1,6 +1,7 @@
 """Find the most symmetric Phistomefel ring patterns"""
 import sys
-sys.path.insert(0, '.')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from solver.sinkhorn_solver import SinkhornSudokuSolver, SinkhornConfig
 from solver.board import PUZZLE_COLLECTION
 from itertools import combinations

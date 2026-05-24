@@ -1,1 +1,1 @@
-﻿# sudoku-field: 鏁扮嫭鍔涘鍦
+# sudoku-sinkhorn solver package

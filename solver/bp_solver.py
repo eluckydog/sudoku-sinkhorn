@@ -11,6 +11,9 @@ from typing import Tuple, Optional
 from dataclasses import dataclass
 from solver.board import SudokuBoard, BOX_MAP
 
+_EPS = 1e-300   # min log-prob (log of near-zero)
+_LOG_MAX = 700  # safe exp bound: log(sys.float_info.max)
+
 
 @dataclass
 class BPConfig:
@@ -99,7 +102,8 @@ class BPSudokuSolver:
         for r in range(9):
             for v in range(9):
                 for j in range(9):
-                    mu[r, v, j] = belief[r, j, v] - mu_col[r, j, v] - mu_box[r, j, v]
+                    val = belief[r, j, v] - mu_col[r, j, v] - mu_box[r, j, v]
+                    mu[r, v, j] = np.clip(val, -_LOG_MAX, _LOG_MAX)
         return mu
 
     def _update_col_messages(self, belief, mu_col, mu_row, mu_box):
@@ -108,7 +112,8 @@ class BPSudokuSolver:
         for c in range(9):
             for v in range(9):
                 for r in range(9):
-                    mu[c, v, r] = belief[r, c, v] - mu_row[r, v, c] - mu_box[r, c, v]
+                    val = belief[r, c, v] - mu_row[r, v, c] - mu_box[r, c, v]
+                    mu[c, v, r] = np.clip(val, -_LOG_MAX, _LOG_MAX)
         # Transpose to (r=9, c=9, v=9) format
         result = np.zeros((9, 9, 9))
         for c in range(9):
@@ -125,33 +130,41 @@ class BPSudokuSolver:
             cells = [(br + dr, bc + dc) for dr in range(3) for dc in range(3)]
             for v in range(9):
                 for ci, (r, c) in enumerate(cells):
-                    mu[r, c, v] = belief[r, c, v] - mu_row[r, v, c] - mu_col[r, c, v]
+                    val = belief[r, c, v] - mu_row[r, v, c] - mu_col[r, c, v]
+                    mu[r, c, v] = np.clip(val, -_LOG_MAX, _LOG_MAX)
         return mu
 
     def _update_belief(self, board, mu_row, mu_col, mu_box):
-        """Update belief = clue_prior + sum of incoming messages"""
+        """Update belief = clue_prior + sum of incoming messages (numerically stable)"""
         belief = np.zeros((9, 9, 9), dtype=np.float64)
         for r in range(9):
             for c in range(9):
                 v_clue = board.grid[r][c]
                 for v in range(9):
-                    belief[r, c, v] = mu_row[r, v, c] + mu_col[r, c, v] + mu_box[r, c, v]
+                    val = mu_row[r, v, c] + mu_col[r, c, v] + mu_box[r, c, v]
+                    belief[r, c, v] = np.clip(val, -_LOG_MAX, _LOG_MAX)
                 if v_clue != 0:
-                    belief[r, c, :] = -1e10
+                    belief[r, c, :] = -_LOG_MAX
                     belief[r, c, v_clue - 1] = 0.0
-                # Softmax normalization
+                # Log-softmax normalization (numerically stable)
                 b = belief[r, c, :]
                 b = b - np.max(b)
-                exp_b = np.exp(b)
-                s = exp_b.sum() + 1e-15
-                belief[r, c, :] = np.log(exp_b / s)
+                exp_b = np.exp(np.clip(b, -_LOG_MAX, _LOG_MAX))
+                s = exp_b.sum()
+                if s < 1e-300:
+                    # All near-zero: revert to uniform
+                    belief[r, c, :] = np.log(1.0 / 9.0)
+                else:
+                    belief[r, c, :] = b - np.log(s)
         return belief
 
     def _compute_entropy(self, belief):
         """Compute average entropy from log-belief"""
-        p = np.exp(belief)
-        p = p / (p.sum(axis=2, keepdims=True) + 1e-15)
-        eps = 1e-15
+        b = np.clip(belief, -_LOG_MAX, _LOG_MAX)
+        b = b - np.max(b, axis=2, keepdims=True)
+        exp_b = np.exp(b)
+        p = exp_b / (exp_b.sum(axis=2, keepdims=True) + 1e-300)
+        eps = 1e-300
         return -np.sum(p * np.log(p + eps)) / p.size
 
     def solve_with_history(self, board: SudokuBoard) -> dict:
