@@ -1,64 +1,69 @@
-# Sudoku-Sinkhorn
+# Sudoku-Sinkhorn / 数独辛克霍恩
 
-**A 3D tensor Sinkhorn-Knopp approach to solving Sudoku puzzles.**
+**A 3D tensor Sinkhorn-Knopp approach to solving Sudoku puzzles**
+**三维张量 Sinkhorn-Knopp 连续松弛求解数独**
 
 Featuring a computational analysis of **Phistomefel's Ring** — see [the paper](papers/phistomefel_ring_set_equivalence.md).
 
-## Why This Matters
+---
+
+## Why This Matters / 为什么重要
 
 Standard Sudoku solvers are discrete (backtracking, constraint propagation, exact cover). This project treats Sudoku as a **continuous optimization problem**: a 9×9×9 probability tensor where the correct digits emerge through entropy reduction and alternating projection onto four constraint sets.
 
-The method works when classic discrete methods struggle — specifically, it finds the **Arto Inkala** puzzle's solution through pure continuous relaxation, without any search tree or constraint propagation.
+传统数独求解器是离散的（回溯、约束传播、精确覆盖）。本项目将数独视为**连续优化问题**：一个 9×9×9 概率张量，通过熵减和交替投影到四个约束集上，正确数字自然浮现。
 
-## The Sinkhorn Method in 30 Seconds
+The method works when classic discrete methods struggle — it finds solutions through pure continuous relaxation, without any search tree or constraint propagation.
 
-1. Represent the puzzle as a 9×9×9 tensor X[i,j,v] = probability cell (i,j) contains digit v
-2. Start uniform: every cell has p=1/9 for every digit
-3. Alternately normalize four constraint sets:
-   - **Cell**: Σ_v X[i,j,v] = 1 (each cell gets one digit)
-   - **Row**: Σ_j X[i,j,v] = 1 (each row has each digit once)
-   - **Col**: Σ_i X[i,j,v] = 1 (each col has each digit once)
-   - **Box**: Σ_{i,j∈box} X[i,j,v] = 1 (each box has each digit once)
-4. Anneal temperature from fuzzy to crisp — the Sinkhorn projection ensures constraints stay satisfied while the system converges to a one-hot solution
-5. Extract the answer: argmax per cell
+当经典离散方法失效时，这个方法仍然有效——纯连续松弛就能求解，无需搜索树或约束传播。
 
-Clue cells are held fixed (temperature = 1) throughout.
+## The Sinkhorn Method in 30 Seconds / 三十秒理解
 
-## Structure
+1. **Tensor** / 张量: 9×9×9 张量 X[i,j,v] = 格(i,j)含数字v的概率
+2. **Init** / 初始化: 所有格均匀分布 p=1/9
+3. **Project** / 交替投影到四个约束集:
+   - **Cell** / 格约束: Σ_v X[i,j,v] = 1
+   - **Row** / 行约束: Σ_j X[i,j,v] = 1
+   - **Col** / 列约束: Σ_i X[i,j,v] = 1
+   - **Box** / 宫约束: Σ_{i,j∈box} X[i,j,v] = 1
+4. **Anneal** / 退火: 温度从模糊到锐化，Sinkhorn 投影确保约束始终满足
+5. **Extract** / 提取: 每格取 argmax
+
+Clue cells are held fixed throughout. 提示格始终固定。
+
+## Structure / 目录结构
 
 ```
 sudoku-sinkhorn/
 ├── solver/
-│   ├── board.py              Sudoku board representation
-│   ├── sinkhorn_solver.py    Sinkhorn-Knopp continuous solver ★
-│   ├── ga_solver.py          Genetic algorithm baseline
-│   ├── sa_solver.py          Simulated annealing baseline
-│   ├── gradient_solver.py    Gradient descent baseline
-│   ├── bp_solver.py          Belief propagation baseline
-│   ├── field_compare.py      5-engine comparison framework
-│   ├── visualize.py          3D tensor visualization + phase diagrams
-│   ├── find_ring.py          Phistomefel ring pattern search
-│   └── demo.py               End-to-end run
+│   ├── board.py              盘面表示
+│   ├── sinkhorn_solver.py    Sinkhorn-Knopp 连续求解器 ★
+│   ├── ga_solver.py          遗传算法基线
+│   ├── sa_solver.py          模拟退火基线
+│   ├── gradient_solver.py    梯度下降基线
+│   ├── bp_solver.py          置信传播基线
+│   ├── field_compare.py      五引擎对比框架
+│   ├── visualize.py          三维张量可视化 + 相图
+│   ├── find_ring.py          Phistomefel 环搜索
+│   └── demo.py               端到端运行
 ├── papers/
-│   └── phistomefel_ring_set_equivalence.md   ★ Computational analysis paper
+│   └── phistomefel_ring_set_equivalence.md   ★ 分析论文
 ├── tests/
-│   └── test_sudoku_field.py  16 tests
+│   └── test_sudoku_field.py  16 个测试
 ├── data/
-│   └── field_report.md       Cross-engine comparison report
-├── figures/                  Convergence curves, heatmaps, phase diagrams
+│   └── field_report.md       引擎对比报告
+├── figures/                  收敛曲线、热力图、相图
+│   └── phistomefel_ring.html  交互式环可视化
 └── README.md
 ```
 
-## Quick Start
+## Quick Start / 快速开始
 
 ```python
 from solver.sinkhorn_solver import SinkhornSudokuSolver, SinkhornConfig
 from solver.board import PUZZLE_COLLECTION
 
-# Get a puzzle
 board = PUZZLE_COLLECTION["medium"]
-
-# Solve
 solver = SinkhornSudokuSolver(SinkhornConfig(T_start=10.0, T_end=0.001))
 result = solver.solve(board)
 
@@ -67,13 +72,13 @@ if result.solved:
     print(f"Solved in {result.time_seconds:.2f}s at T_c={result.critical_T:.4f}")
 ```
 
-Or run the full comparison:
+Or run full comparison / 运行全对比:
 
 ```bash
 python -m solver.demo
 ```
 
-## Results
+## Results / 结果
 
 | Puzzle | Clues | Sinkhorn | GA | SA | Gradient | BP | T_c |
 |--------|-------|----------|-----|-----|----------|------|-----|
@@ -82,33 +87,35 @@ python -m solver.demo
 | Arto Inkala | 23 | ❌ | ❌ | ❌ | ❌ | ❌ | 0.630 |
 | AI Escargot | 21 | ❌ | ❌ | ❌ | ❌ | ❌ | 0.630 |
 
-**Only the Sinkhorn method solves any puzzles.** This isn't luck — the continuous relaxation fundamentally avoids the column-constraint blindness that plagues row-initialized discrete methods.
+**Only Sinkhorn solves any puzzles.** The continuous relaxation avoids the column-constraint blindness that plagues row-initialized discrete methods.
 
-T_c (critical temperature) is a **measurable hardness signature**: higher T_c = constraints lock in early = easier puzzle. Medium (0.912) > Minimal (0.759) > Hard = Escargot (0.630). This is the first time phase transition temperature has been measured as a Sudoku difficulty metric.
+**唯一能求解的是 Sinkhorn。** 连续松弛从根本上避免了行初始化离散方法的列约束盲区。
 
-## Why It's Novel
+T_c (critical temperature) is a **measurable hardness signature**: higher T_c = easier puzzle. Medium (0.912) > Minimal (0.759) > Hard = Escargot (0.630). First time phase transition temperature has been used as a Sudoku difficulty metric.
 
-1. **Sinkhorn-Knopp generalized to 4-constraint 3D tensors** — the original algorithm only handles doubly stochastic matrices (row+col). This project adds a third (box) dimension and the cell constraint, making it a genuine 3D generalization.
+**T_c 是第一个可量化的数独难度指标：T_c 越高 = 越容易。**
 
-2. **Constraint-hardness spectroscopy** — the phase transition temperature T_c provides a continuous difficulty metric, unlike discrete measures (clue count, difficulty rating).
+## Why It's Novel / 创新点
 
-3. **Continuous beats discrete in this domain** — every discrete solver we tried failed on all puzzles. The continuous relaxation finds solutions where discrete methods can't.
+1. **4-约束 3D 张量 Sinkhorn** — 原始算法只处理双随机矩阵（行+列），本项目扩展了第三个（宫）维度和格约束
+2. **约束硬度光谱（T_c）** — 相变温度 T_c 提供连续难度指标，而非离散的线索数或难度评级
+3. **连续胜出离散** — 我们试过的所有离散求解器全失败，连续松弛能找到解
 
-## Phistomefel's Ring — Key Findings
+## Phistomefel's Ring / 菲斯托梅菲尔环
 
-Using the Sinkhorn solver to generate valid solutions, we performed an exhaustive search and discovered:
+Key findings from computational analysis / 计算分析核心发现:
 
-**1. The ring is not unique.** There are **25 distinct ring configurations** that satisfy the Phistomefel set equivalence, not just one.
+**1. Ring is not unique / 环不唯一.** 存在 **25 种**不同的环配置，都满足 Phistomefel 集合等价。
 
-**2. The "away-from-center" rule.** For any 3×3 box, the 2×2 corner farthest from the grid center participates in ring structures. This generalizes to any complementary 4-box partition.
+**2. Away-from-center rule / 远离中心规则.** 每个 3×3 盒子中远离中心的 2×2 角落参与环结构。推广到任意互补 4 盒分区。
 
-**3. The set equivalence is universal.** Any two groups of 4 boxes (sharing ≤1 box), each selecting their away-from-center 2×2 corners, produce equal 16-cell multisets.
+**3. Universal set equivalence / 普适集合等价.** 任意两组 4 盒子（共享 ≤1 盒），各自选择远离中心的 2×2 角落，产生的 16 格多重集相等。
 
-Phistomefel Ring visualization (solved medium puzzle):
+Phistomefel Ring visualization / 可视化:
 ```
-GG.BBB.GG    G = corner 2x2 blocks (16 cells)
-GG.B...GG    B = ring cells (16 cells)
-.........    Both multisets equal:
+GG.BBB.GG    G = 四角 2×2 (16格)
+GG.B...GG    B = 环 (16格)
+.........    多重集相等:
 BBB...BBB    (1,2,2,3,3,3,4,4,5,5,6,7,7,8,8,9)
 ......B..
 ..B......
@@ -117,14 +124,16 @@ GG.B...GG
 GG.B...GG
 ```
 
-See the full paper: [`papers/phistomefel_ring_set_equivalence.md`](papers/phistomefel_ring_set_equivalence.md)
+Interactive visualization / 交互可视化: [`figures/phistomefel_ring.html`](figures/phistomefel_ring.html)
 
-## Dependencies
+Full paper / 完整论文: [`papers/phistomefel_ring_set_equivalence.md`](papers/phistomefel_ring_set_equivalence.md)
+
+## Dependencies / 依赖
 
 - Python 3.8+
 - NumPy
-- Matplotlib (for visualization)
+- Matplotlib（可视化）
 
-## License
+## License / 许可证
 
 MIT
