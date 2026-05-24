@@ -4,7 +4,13 @@
 
 ---
 
-### Abstract
+> **⚠️ SUPERSEDED** — This paper has been superseded by a rigorous set-theoretic proof.
+> See [`phistomefel_ring_proof.md`](./phistomefel_ring_proof.md) for the corrected claims.
+>
+> Key corrections:
+> - The ring is **not** described by 25 solution-dependent patterns. The universal ring is `R = I ∪ C` (12 edge-inner cells + 4 corner centers), proven by inclusion-exclusion.
+> - The **generalization conjecture is false** — 70/70 counterexamples.
+> - The 
 
 The Phistomefel Ring is a well-known theorem in Sudoku theory stating that the 16 cells in the four 2x2 corner blocks of a solved grid contain the same multiset of digits as a complementary set of 16 cells forming a "ring." This paper presents a computational analysis using exhaustive search over the 36-cell edge-box region to enumerate all valid ring configurations. We find that **the Phistomefel Ring is not a unique structure but a family of 25 patterns**, all satisfying the same set equivalence. We formalize this as the "away-from-center" rule and generalize the result to arbitrary complementary box partitions.
 

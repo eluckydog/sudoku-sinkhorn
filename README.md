@@ -101,32 +101,36 @@ T_c (critical temperature) is a **measurable hardness signature**: higher T_c = 
 2. **约束硬度光谱（T_c）** — 相变温度 T_c 提供连续难度指标，而非离散的线索数或难度评级
 3. **连续胜出离散** — 我们试过的所有离散求解器全失败，连续松弛能找到解
 
-## Phistomefel's Ring / 菲斯托梅菲尔环
+## Phistomefel's Ring / 菲斯托梅菲尔环 — Rigorous Proof 🔬
 
-Key findings from computational analysis / 计算分析核心发现:
+A **set-theoretic proof** (not just computation) has been completed in [`papers/phistomefel_ring_proof.md`](papers/phistomefel_ring_proof.md).
 
-**1. Ring is not unique / 环不唯一.** 存在 **25 种**不同的环配置，都满足 Phistomefel 集合等价。
+### The Universal Ring R = I ∪ C
 
-**2. Away-from-center rule / 远离中心规则.** 每个 3×3 盒子中远离中心的 2×2 角落参与环结构。推广到任意互补 4 盒分区。
-
-**3. Universal set equivalence / 普适集合等价.** 任意两组 4 盒子（共享 ≤1 盒），各自选择远离中心的 2×2 角落，产生的 16 格多重集相等。
-
-Phistomefel Ring visualization / 可视化:
+The ring is **not** the 25 solution-dependent patterns found earlier. The true universal ring is:
 ```
-GG.BBB.GG    G = 四角 2×2 (16格)
-GG.B...GG    B = 环 (16格)
-.........    多重集相等:
-BBB...BBB    (1,2,2,3,3,3,4,4,5,5,6,7,7,8,8,9)
-......B..
-..B......
-...BB....
-GG.B...GG
-GG.B...GG
+. . . . . . . . .    G = Far corners of boxes {0,2,6,8} (16 cells)
+. . . . . . . . .    R = I ∪ C = Universal ring (16 cells)
+. . R R R R R . .    I = 12 edge-box inner cells
+. . R . . . R . .    C = 4 corner-box center-adjacent cells
+. . R . . . R . .
+. . R . . . R . .    Proof: From set inclusion-exclusion on
+. . R R R R R . .    outer rows {0,1,7,8} + outer cols {0,1,7,8}
+. . . . . . . . .    Verified on 6 independent solutions
+. . . . . . . . .
 ```
+
+### Corrected Claims
+
+| Old (Computational) | Corrected (Proof-Based) |
+|------|------|
+| Ring has 25 configurations | Those are **solution-dependent** — 0/25 cross-validate. The universal ring is I ∪ C. |
+| Away-from-center rule generalizes | **FALSE** — 0/70 non-classic 4-box partitions satisfy the equivalence. |
+| No mathematical proof | **Set-theoretic proof complete** — see [`papers/phistomefel_ring_proof.md`](papers/phistomefel_ring_proof.md) |
 
 Interactive visualization / 交互可视化: [`figures/phistomefel_ring.html`](figures/phistomefel_ring.html)
 
-Full paper / 完整论文: [`papers/phistomefel_ring_set_equivalence.md`](papers/phistomefel_ring_set_equivalence.md)
+Original analysis (superseded): [`papers/phistomefel_ring_set_equivalence.md`](papers/phistomefel_ring_set_equivalence.md)
 
 ## Dependencies / 依赖
 
