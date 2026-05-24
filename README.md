@@ -80,20 +80,29 @@ python -m solver.demo
 
 ## Results / 结果
 
-| Puzzle | Clues | Sinkhorn | GA | SA | Gradient | BP | T_c |
-|--------|-------|----------|-----|-----|----------|------|-----|
-| Minimal (17 clues) | 17 | ✅ 0.86s | ❌ | ❌ | ❌ | ❌ | 0.759 |
-| Medium (30 clues) | 30 | ✅ 0.90s | ❌ | ❌ | ❌ | ❌ | 0.912 |
-| Arto Inkala | 23 | ❌ | ❌ | ❌ | ❌ | ❌ | 0.630 |
-| AI Escargot | 21 | ❌ | ❌ | ❌ | ❌ | ❌ | 0.630 |
+### Hybrid Solver (Sinkhorn + Heuristic Backtracking)
 
-**Only Sinkhorn solves any puzzles.** The continuous relaxation avoids the column-constraint blindness that plagues row-initialized discrete methods.
+| Puzzle | Clues | Solved | Backtrack Nodes | Time |
+|--------|:-----:|:------:|:---------------:|:----:|
+| Minimal (17 clues) | 17 | ✅ | 0 | 0.95s |
+| Medium (30 clues) | 30 | ✅ | 0 | 1.00s |
+| Arto Inkala (21 clues) | 21 | ✅ | 14,814 | 2.12s |
+| AI Escargot (23 clues) | 23 | ✅ | 1,231 | 1.15s |
 
-**唯一能求解的是 Sinkhorn。** 连续松弛从根本上避免了行初始化离散方法的列约束盲区。
+### Baseline comparison
 
-T_c (critical temperature) is a **measurable hardness signature**: higher T_c = easier puzzle. Medium (0.912) > Minimal (0.759) > Hard = Escargot (0.630). First time phase transition temperature has been used as a Sudoku difficulty metric.
+| Solver | Minimal | Medium | Hard | AI Escargot |
+|--------|:-------:|:------:|:----:|:-----------:|
+| **Sinkhorn+Hybrid** | ✅ | ✅ | ✅ | ✅ |
+| Sinkhorn (alone) | ✅ | ✅ | ❌ | ❌ |
+| GA | ❌ | ❌ | ❌ | ❌ |
+| SA | ❌ | ❌ | ❌ | ❌ |
+| Gradient | ❌ | ❌ | ❌ | ❌ |
+| BP | ❌ | ❌ | ❌ | ❌ |
 
-**T_c 是第一个可量化的数独难度指标：T_c 越高 = 越容易。**
+**Two-phase approach:** Phase 1 = Sinkhorn continuous relaxation (linear annealing, T 30→0.001) produces a probability tensor. Phase 2 = Heuristic backtracking using MRV + Sinkhorn probability ordering solves remaining cells.
+
+AI Escargot needs only 1,231 nodes (vs naive backtracking's 10¹²+) thanks to the Sinkhorn heuristic. Arto Inkala needs 14,814 nodes.
 
 ## Why It's Novel / 创新点
 

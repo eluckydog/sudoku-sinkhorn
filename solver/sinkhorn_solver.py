@@ -13,7 +13,7 @@ Novelty: Generalization to 4-constraint 3D tensor for sudoku solving
 """
 
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Callable
 from dataclasses import dataclass
 from solver.board import SudokuBoard, BOX_MAP
 
@@ -213,3 +213,48 @@ class SinkhornSudokuSolver:
         meta["solution"] = sol
         meta["solved"] = sol.is_solved()
         return meta
+
+    def _get_tensor(self, board: SudokuBoard) -> np.ndarray:
+        """Run solver and return the final probability tensor"""
+        X = self._init_tensor(board)
+        for t in range(self.config.n_iter):
+            T = self._temperature(t)
+            for _ in range(self.config.n_inner):
+                X = self._sinkhorn_step(X, T)
+            X = self._temperature_sharpen(X, T)
+            for r in range(9):
+                for c in range(9):
+                    v = board.grid[r][c]
+                    if v != 0:
+                        X[r, c, :] = 1e-10
+                        X[r, c, v - 1] = 1.0
+            if self.compute_violation(X) < self.config.eps_converge:
+                break
+        return X
+
+
+def hybrid_solve(board: SudokuBoard) -> Tuple[SudokuBoard, dict]:
+    """
+    Hybrid solver: Sinkhorn continuous relaxation + heuristic backtracking.
+
+    Phase 1: Run Sinkhorn linear-annealing solver to get probability tensor.
+             Extract conflict-free partial fill from argmax probabilities.
+    Phase 2: Backtrack on remaining cells using Sinkhorn probabilities
+             as search heuristic (MRV + highest-probability-first).
+             Falls back to solving from fresh clues if partial-fill fails.
+
+    Solves all puzzles in the standard test suite including AI Escargot.
+    """
+    from solver.sinkhorn_search import hybrid_solve as _hs
+    import time
+    t0 = time.time()
+    grid, nodes, solved = _hs(board)
+    dt = time.time() - t0
+    solution = SudokuBoard(grid)
+    metadata = {
+        "solver": "sinkhorn+hybrid",
+        "solved": solved,
+        "time_seconds": dt,
+        "backtrack_nodes": nodes,
+    }
+    return solution, metadata

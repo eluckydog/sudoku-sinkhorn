@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from solver.board import PUZZLE_COLLECTION
 from solver.field_compare import SudokuField
-from solver.sinkhorn_solver import SinkhornSudokuSolver, SinkhornConfig
+from solver.sinkhorn_solver import SinkhornSudokuSolver, SinkhornConfig, hybrid_solve
 from solver.ga_solver import GASudokuSolver, GAConfig
 from solver.sa_solver import SASudokuSolver, SAConfig
 from solver.gradient_solver import GradientSudokuSolver, GradientConfig
@@ -38,7 +38,16 @@ def main():
     gradient = GradientSudokuSolver(GradientConfig(lr=0.01, n_iter=3000, verbose=False))
     bp = BPSudokuSolver(BPConfig(max_iter=100, damping=0.5, verbose=False))
 
+    # Hybrid solver wrapper
+    def hybrid_with_history(board):
+        sol, meta = hybrid_solve(board)
+        meta["solver"] = "sinkhorn+hybrid"
+        meta["solution"] = sol
+        meta["solved"] = sol.is_solved()
+        return meta
+
     field = SudokuField()
+    field.register_engine("sinkhorn_hybrid", hybrid_with_history)
     field.register_engine("sinkhorn", sinkhorn.solve_with_history)
     field.register_engine("genetic_algorithm", ga.solve_with_history)
     field.register_engine("simulated_annealing", sa.solve_with_history)
